@@ -5,7 +5,7 @@ import requests
 # CONFIGURATION
 # ==============================
 
-HF_TOKEN = "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"
+HF_TOKEN = "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"
 
 API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
