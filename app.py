@@ -1,42 +1,21 @@
 import streamlit as st
-import requests
+from transformers import pipeline
 
 # ==============================
-# CONFIGURATION
+# LOAD MODEL
 # ==============================
 
-HF_TOKEN = "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"
+@st.cache_resource
+def load_model():
+    pipe = pipeline(
+        "text-generation",
+        model="microsoft/phi-2",
+        max_new_tokens=300,
+        temperature=0.3
+    )
+    return pipe
 
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
-
-# ==============================
-# FUNCTION TO QUERY MODEL
-# ==============================
-
-def query_hf(prompt):
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 300,
-            "temperature": 0.3,
-            "return_full_text": False
-        }
-    }
-
-    response = requests.post(API_URL, headers=headers, json=payload)
-
-    if response.status_code != 200:
-        return f"Error: {response.json()}"
-
-    result = response.json()
-
-    try:
-        return result[0]["generated_text"]
-    except:
-        return str(result)
+chatbot = load_model()
 
 # ==============================
 # STREAMLIT UI
@@ -45,7 +24,7 @@ def query_hf(prompt):
 st.set_page_config(page_title="Finance Chatbot", page_icon="💰")
 
 st.title("💰 Finance Chatbot")
-st.markdown("Ask finance-related questions (stocks, risk, valuation, etc.)")
+st.markdown("Ask any finance-related questions.")
 
 # ==============================
 # SESSION STATE
@@ -54,7 +33,7 @@ st.markdown("Ask finance-related questions (stocks, risk, valuation, etc.)")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display previous messages
+# Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -63,36 +42,30 @@ for msg in st.session_state.messages:
 # USER INPUT
 # ==============================
 
-user_input = st.chat_input("Ask your finance question...")
+user_input = st.chat_input("Type your question...")
 
 if user_input:
-    # Add user message
     st.session_state.messages.append({"role": "user", "content": user_input})
-    
+
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Finance-focused system prompt
-    system_prompt = (
-        "You are a professional financial advisor chatbot. "
-        "Answer questions related to finance such as stocks, investments, risk, "
-        "valuation, derivatives, and markets. "
-        "Explain clearly with examples when needed.\n\n"
-    )
+    # Internal prompt (hidden from user)
+    prompt = f"""
+You are a financial expert.
 
-    # Maintain conversation context (last 5 messages)
-    history = ""
-    for msg in st.session_state.messages[-5:]:
-        role = "User" if msg["role"] == "user" else "Assistant"
-        history += f"{role}: {msg['content']}\n"
+Answer clearly with proper explanations and calculations where needed.
 
-    full_prompt = system_prompt + history + "Assistant:"
+Question: {user_input}
 
-    # Generate response
+Answer:
+"""
+
     with st.spinner("Thinking..."):
-        answer = query_hf(full_prompt)
+        response = chatbot(prompt)[0]["generated_text"]
 
-    # Store response
+    answer = response.split("Answer:")[-1].strip()
+
     st.session_state.messages.append({"role": "assistant", "content": answer})
 
     with st.chat_message("assistant"):
@@ -107,14 +80,3 @@ st.sidebar.header("Options")
 if st.sidebar.button("Clear Chat"):
     st.session_state.messages = []
     st.rerun()
-
-st.sidebar.markdown("""
-### Model Info:
-- Model: Mistral 7B Instruct (via API)
-- No GPU required
-- Works on any system
-
-### Tips:
-- Ask multi-step finance questions
-- Try calculations + theory together
-""")
