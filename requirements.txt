@@ -1,0 +1,10 @@
+streamlit>=1.32.0
+transformers>=4.40.0
+torch>=2.1.0
+accelerate>=0.28.0
+sentencepiece>=0.2.0
+huggingface-hub>=0.22.0
+bitsandbytes>=0.43.0   # for 4-bit/8-bit quantization (GPU)
+scipy>=1.10.0
+numpy>=1.24.0
+requests>=2.31.0
